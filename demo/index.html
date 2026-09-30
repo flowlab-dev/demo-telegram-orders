@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
+<title>Cedarline Bakehouse - order bot demo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%237b3f2b'/><path d='M7 10.5a3.5 3.5 0 0 1 3.5-3.5h11A3.5 3.5 0 0 1 25 10.5v7a3.5 3.5 0 0 1-3.5 3.5H14l-5 4v-4.3A3.5 3.5 0 0 1 7 17.5z' fill='white'/></svg>">
+<meta name="description" content="A Telegram bot that takes bakery orders around the clock. Working demo: the same dialog engine that will run the live bot, replayed in the browser.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f7f3ec;
+  --panel: #fffdfa;
+  --panel-2: #f1ebe1;
+  --ink: #241d16;
+  --ink-soft: #5d5245;
+  --line: #e2d8c9;
+  --accent: #7b3f2b;
+  --accent-soft: #f0e0d6;
+  --good: #2f6b45;
+  --warn: #8a6516;
+  --chat-bg: #e9e0d2;
+  --bubble-bot: #fffdfa;
+  --bubble-me: #d7ead9;
+  --shadow: 0 1px 2px rgba(36,29,22,.06), 0 8px 24px rgba(36,29,22,.07);
+  --radius: 14px;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17130f;
+  --panel: #211b16;
+  --panel-2: #2b231c;
+  --ink: #f2e9df;
+  --ink-soft: #b7a996;
+  --line: #3a3027;
+  --accent: #e9a583;
+  --accent-soft: #3a2a21;
+  --good: #7dc79a;
+  --warn: #e0bc72;
+  --chat-bg: #1d1814;
+  --bubble-bot: #2b231c;
+  --bubble-me: #33452f;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }  /* beats the grid/flex rules below */
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+a { color: var(--accent); }
+h1, h2, h3 { line-height: 1.2; margin: 0 0 12px; letter-spacing: -.01em; }
+h1 { font-size: clamp(28px, 4.2vw, 44px); }
+h2 { font-size: clamp(22px, 2.8vw, 30px); }
+h3 { font-size: 18px; }
+p { margin: 0 0 14px; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 14px; }
+
+header.top {
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px);
+}
+.top-inner { display: flex; align-items: center; gap: 12px; padding-top: 12px; padding-bottom: 12px; }  /* keep the side padding from .wrap */
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.logo-mark {
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--accent); color: #fff; font-size: 17px;
+}
+.top-spacer { flex: 1; }
+button, .btn {
+  font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); padding: 8px 14px; transition: .15s;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+:root[data-theme="dark"] .btn-primary { color: #17130f; }  /* the dark accent is light - dark text on it */
+.btn-primary:hover { filter: brightness(1.08); }
+
+.hero { padding: 40px 0 8px; }
+.hero p.lead { font-size: 18px; max-width: 62ch; color: var(--ink-soft); }
+.tagline { display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.note {
+  border: 1px solid var(--line); border-left: 4px solid var(--warn);
+  background: var(--panel); border-radius: 10px; padding: 12px 16px; margin: 18px 0 8px;
+  font-size: 14px; color: var(--ink-soft);
+}
+.note b { color: var(--ink); }
+
+section { padding: 34px 0; border-top: 1px solid var(--line); margin-top: 28px; }
+section:first-of-type { border-top: 0; margin-top: 0; }
+.sec-head { max-width: 70ch; margin-bottom: 20px; }
+
+.split { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 24px; align-items: start; }
+/* Grid and flex children default to min-width:auto, so one wide table pushes the whole
+   page sideways on a phone. This is the fix for that, not a decoration. */
+.split > *, .cols > *, .card, .phone { min-width: 0; }
+
+/* phone ------------------------------------------------------------------ */
+.phone {
+  border: 1px solid var(--line); border-radius: 26px; background: var(--panel);
+  box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column;
+  height: 640px;
+}
+.phone-bar {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  border-bottom: 1px solid var(--line); background: var(--panel-2);
+}
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; }
+.phone-title { font-weight: 600; font-size: 15px; }
+.phone-sub { font-size: 12px; color: var(--good); }
+.chat:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chat {
+  flex: 1; overflow-y: auto; padding: 14px; background: var(--chat-bg);
+  display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth;
+}
+.msg { max-width: 86%; padding: 9px 12px; border-radius: 14px; font-size: 14.5px; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
+.msg.bot { background: var(--bubble-bot); border-bottom-left-radius: 5px; align-self: flex-start; }
+.msg.me { background: var(--bubble-me); border-bottom-right-radius: 5px; align-self: flex-end; }
+.msg b { font-weight: 600; }
+.keys { display: flex; flex-direction: column; gap: 6px; align-self: flex-start; width: 86%; margin-bottom: 4px; }
+.keys .row { display: flex; gap: 6px; }
+.keys button {
+  flex: 1; font-size: 13.5px; padding: 8px 10px; border-radius: 10px;
+  background: var(--bubble-bot); border: 1px solid var(--line); text-align: center;
+}
+.composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); background: var(--panel); }
+.composer input { flex: 1; font: inherit; font-size: 14px; padding: 9px 12px; border-radius: 20px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); }
+.composer input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+
+/* owner side ------------------------------------------------------------- */
+.card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
+.card-head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+.card-head h3 { margin: 0; }
+.card-body { padding: 16px; }
+.pill { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.owner-feed { display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; }
+.owner-msg { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.owner-msg.question { border-left: 3px solid var(--warn); }
+.empty { color: var(--ink-soft); font-size: 14px; font-style: italic; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 600; }
+td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.table-scroll { overflow-x: auto; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0 22px; }
+.stat { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 14px 16px; }
+.stat .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 13px; color: var(--ink-soft); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+details.transcript { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 8px; }
+details.transcript > summary { cursor: pointer; padding: 10px 14px; font-size: 14.5px; display: flex; gap: 10px; align-items: center; }
+details.transcript > summary::marker { color: var(--accent); }
+.transcript-body { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 6px; background: var(--chat-bg); }
+.tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+.tag.ok { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+.tag.none { background: var(--panel-2); color: var(--ink-soft); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+ul.plain { margin: 0 0 14px; padding-left: 18px; }
+ul.plain li { margin-bottom: 7px; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
+footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--ink-soft); font-size: 14px; }
+
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .phone { height: 560px; }
+}
+@media (max-width: 420px) {
+  .top-inner .pill { display: none; }  /* the title alone fits the top bar on a phone */
+  .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat .v { font-size: 22px; }
+  .keys { width: 100%; }
+  .msg { max-width: 92%; }
+}
+@media (prefers-reduced-motion: reduce) { .chat { scroll-behavior: auto; } * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+
+<!-- flowlab-band -->
+<style>.fl-band{margin:0;max-width:none;box-sizing:border-box;padding:.5rem 1rem;background:#15171c;color:#f1f1ec;font:500 .875rem/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center;position:relative;z-index:10}
+.fl-band a{color:#fff;text-decoration:underline;text-underline-offset:2px}
+.fl-band a:focus-visible{outline:2px solid #9db2ff;outline-offset:2px;border-radius:2px}
+.fl-band__more{white-space:nowrap}</style>
+<p class="fl-band" role="note">Self-initiated demo by <a href="https://flowlab-dev.github.io/work/telegram-orders/">Flow Lab</a>. Cedarline Bakehouse is invented.</p>
+<!-- /flowlab-band -->
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="logo"><span class="logo-mark" aria-hidden="true">🥐</span> Cedarline Bakehouse</div>
+    <span class="pill">order bot demo</span>
+    <div class="top-spacer"></div>
+    <button id="theme-toggle" type="button" aria-label="Switch between light and dark">🌙 Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <span class="tagline">Telegram bot · takes orders while you sleep</span>
+    <h1>The bakery is closed. The order still gets taken.</h1>
+    <p class="lead">
+      A customer opens Telegram at 01:47, picks a cake, gets a real price and a real pickup slot,
+      and leaves a phone number. The owner wakes up to a finished order, not a missed message.
+      Everything on this page runs the same dialog engine that will drive the live bot - press the buttons and see.
+    </p>
+    <div class="note">
+      <b>This is my own demo project.</b> Cedarline Bakehouse, its menu and the night below are invented -
+      no client's data is shown here. The phone on this page is a Telegram-style window running the bot's engine in your browser,
+      not Telegram itself; the same engine file is built to drive the live bot through the Telegram Bot API.
+    </div>
+  </div>
+
+  <section id="try">
+    <div class="sec-head">
+      <h2>Order something</h2>
+      <p class="muted">Tap the buttons, or type - the bot understands <code>25.09</code>, <code>25 Sep</code>, <code>tomorrow</code>,
+      plain numbers, and it says so plainly when something will not work.</p>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="phone">
+          <div class="phone-bar">
+            <div class="avatar" aria-hidden="true">🥐</div>
+            <div>
+              <div class="phone-title">Cedarline Bakehouse</div>
+              <div class="phone-sub">bot · online</div>
+            </div>
+          </div>
+          <div class="chat" id="chat" tabindex="0" aria-live="polite" aria-label="Chat with the order bot"></div>
+          <form class="composer" id="composer" autocomplete="off">
+            <input id="input" type="text" placeholder="Write a message" aria-label="Write a message to the bot">
+            <button class="btn-primary" type="submit">Send</button>
+          </form>
+        </div>
+        <div class="controls" style="margin-top:12px">
+          <button id="restart" type="button">↺ Start over</button>
+          <span class="small muted">Nothing leaves this page - no network, no keys.</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head"><h3>What the owner's phone shows</h3><span class="pill" id="owner-count">0</span></div>
+          <div class="card-body">
+            <div class="owner-feed" id="owner-feed"><div class="empty">Nothing yet - finish an order in the chat and it appears here instantly.</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Orders as they are stored</h3></div>
+          <div class="card-body">
+            <div class="table-scroll">
+              <table id="live-orders">
+                <thead><tr><th>Order</th><th>Item</th><th>Ready</th><th>Handover</th><th class="num">Total</th></tr></thead>
+                <tbody><tr><td colspan="5" class="empty">No orders yet.</td></tr></tbody>
+              </table>
+            </div>
+            <p class="small muted" style="margin:12px 0 0">
+              In the live bot this same record is written to <code>orders.json</code> - or to the shop's spreadsheet or CRM,
+              which is one small file to swap.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="night">
+    <div class="sec-head">
+      <h2>One night, replayed</h2>
+      <p class="muted" id="night-intro">Press the button: a written night of customers - one September night, invented like
+      the rest of this demo - is handled by the engine here, in your browser. Every number below is counted from that run,
+      not typed in by hand.</p>
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" id="run-night" type="button">▶ Run the night</button>
+      <span class="small muted" id="night-state">Not run yet.</span>
+    </div>
+
+    <div class="stats" id="night-stats" hidden>
+      <div class="stat"><div class="v" id="s-orders">-</div><div class="k">orders taken</div></div>
+      <div class="stat"><div class="v" id="s-revenue">-</div><div class="k">booked overnight</div></div>
+      <div class="stat"><div class="v" id="s-questions">-</div><div class="k">passed to a human</div></div>
+      <div class="stat"><div class="v" id="s-chats">-</div><div class="k">chats handled</div></div>
+    </div>
+
+    <div class="split" id="night-result" hidden>
+      <div class="card">
+        <div class="card-head"><h3>The summary waiting when the ovens go on</h3></div>
+        <div class="card-body"><div class="owner-msg" id="night-summary"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>The night's orders</h3></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table id="night-orders">
+              <thead><tr><th>Order</th><th>Item</th><th>Ready</th><th>Handover</th><th class="num">Total</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="night-transcripts" hidden style="margin-top:20px">
+      <h3>Every chat from that night</h3>
+      <p class="small muted">Open any of them - including the ones that did not end in an order. A bot that only works when
+      the customer behaves is not worth putting in front of customers.</p>
+      <div id="transcript-list"></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="sec-head">
+      <h2>How it is built</h2>
+    </div>
+    <div class="cols">
+      <div class="card"><div class="card-body">
+        <h3>One engine, two front doors</h3>
+        <p class="small">The dialog is a pure state machine: it takes the current state and one event, and returns the next
+        state plus what to send. The live bot feeds it Telegram updates; this page feeds it your clicks. There is no second
+        version written for the demo - a test fails if the copy on this page drifts from the source files.</p>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3>Built to survive the night</h3>
+        <p class="small">Telegram re-sends an update when an answer is lost, so every update id is remembered and never served
+        twice. Network errors and rate limits are retried with growing pauses. Buttons from older messages are recognised and
+        answered politely instead of corrupting a half-finished order. Orders are written to disk before the customer is told "booked".</p>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3>No packages, no keys in code</h3>
+        <p class="small">The bot is plain Node.js - no npm dependencies to audit or update. The token lives in a
+        <code>.env</code> file that never enters the repository, and the log lines never print it. Hosting runs on the shop's own
+        account, so the shop keeps control of its data.</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section id="support">
+    <div class="sec-head">
+      <h2>What a month of support covers</h2>
+      <p class="muted">A bot is not a poster - the menu changes, prices change, Telegram changes. The monthly part keeps it working:</p>
+    </div>
+    <div class="cols">
+      <div class="card"><div class="card-body">
+        <ul class="plain small">
+          <li>Menu, prices, lead times and delivery zones updated whenever the shop changes them.</li>
+          <li>The bot watched: if it stops answering, I hear about it before the customers do.</li>
+          <li>Telegram API changes handled before they break anything.</li>
+        </ul>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <ul class="plain small">
+          <li>Small additions as the shop learns what customers ask for - new items, new questions, a new slot.</li>
+          <li>Monthly note: how many orders the bot took and where people dropped out.</li>
+          <li>Backups of the order file, and export to whatever the shop uses for bookkeeping.</li>
+        </ul>
+      </div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>Honest notes.</b> Cedarline Bakehouse is invented for this demo. The customers, the menu, the addresses and the
+    night above are written by me - no real client's data appears here. The figures come from running the engine on that
+    invented night, in this page, while you watch.</p>
+    <p class="small">Demo project for my portfolio · the same code is what runs the live bot once a token from @BotFather is added.</p>
+  </div>
+</footer>
+
+<script>
+// ---- ENGINE:START (generated by demo/build-embedded.js - do not edit by hand) ----
+// ---- engine/catalog.js ----
+// Cedarline Bakehouse - menu, prices and shop rules.
+// Everything the owner would change month to month lives in this one file:
+// prices, lead times, delivery zones and opening days. No logic here, only data.
+
+const SHOP = {
+  name: 'Cedarline Bakehouse',
+  currency: 'USD',
+  symbol: '$',
+  timezoneLabel: 'shop local time',
+  // 0 = Sunday ... 6 = Saturday. The bakehouse is closed on Mondays.
+  closedWeekdays: [1],
+  pickup: { from: '08:00', to: '18:00' },
+  // Orders below this total cannot be delivered - the bot offers pickup instead.
+  deliveryMinimumCents: 2500,
+  // How far ahead an order may be placed.
+  maxDaysAhead: 60,
+  // Where a customer is sent when the answer needs a person and the shop is closed.
+  humanHandoff: '@cedarline_orders',
+};
+
+const CATEGORIES = [
+  { id: 'cake', title: 'Celebration cakes', leadHours: 48, note: 'baked to order, 48 hours notice' },
+  { id: 'platter', title: 'Office platters', leadHours: 24, note: 'for meetings and events, 24 hours notice' },
+  { id: 'bread', title: 'Bread boxes', leadHours: 12, note: 'next-morning bread, 12 hours notice' },
+];
+
+// priceCents is per unit. Items with variants take their price from the variant.
+const ITEMS = [
+  {
+    id: 'vanilla', categoryId: 'cake', title: 'Classic vanilla layer cake',
+    description: 'Vanilla sponge, mascarpone cream, seasonal fruit.',
+    maxQty: 3, allowsInscription: true,
+    variants: [
+      { id: '6', title: '6 servings', priceCents: 4200 },
+      { id: '10', title: '10 servings', priceCents: 6400 },
+      { id: '16', title: '16 servings', priceCents: 9200 },
+    ],
+  },
+  {
+    id: 'chocolate', categoryId: 'cake', title: 'Dark chocolate fudge cake',
+    description: '70% chocolate, salted caramel layer.',
+    maxQty: 3, allowsInscription: true,
+    variants: [
+      { id: '6', title: '6 servings', priceCents: 4600 },
+      { id: '10', title: '10 servings', priceCents: 7000 },
+      { id: '16', title: '16 servings', priceCents: 9900 },
+    ],
+  },
+  {
+    id: 'lemon', categoryId: 'cake', title: 'Lemon & elderflower cake',
+    description: 'Lemon curd, elderflower syrup, white chocolate shards.',
+    maxQty: 3, allowsInscription: true,
+    variants: [
+      { id: '6', title: '6 servings', priceCents: 4800 },
+      { id: '10', title: '10 servings', priceCents: 7400 },
+      { id: '16', title: '16 servings', priceCents: 10400 },
+    ],
+  },
+  {
+    id: 'pastry', categoryId: 'platter', title: 'Morning pastry platter',
+    description: '12 pieces: croissants, pain au chocolat, cinnamon knots.',
+    priceCents: 3800, maxQty: 10,
+  },
+  {
+    id: 'sandwich', categoryId: 'platter', title: 'Sandwich & focaccia platter',
+    description: '10 portions, half of them vegetarian.',
+    priceCents: 5400, maxQty: 10,
+  },
+  {
+    id: 'cookie', categoryId: 'platter', title: 'Cookie box',
+    description: '24 pieces, four kinds.',
+    priceCents: 3200, maxQty: 10,
+  },
+  {
+    id: 'sourdough', categoryId: 'bread', title: 'Sourdough duo',
+    description: 'Two 900 g country loaves.',
+    priceCents: 1400, maxQty: 12,
+  },
+  {
+    id: 'rye', categoryId: 'bread', title: 'Seeded rye loaf',
+    description: 'Sunflower, flax and pumpkin seeds.',
+    priceCents: 900, maxQty: 12,
+  },
+  {
+    id: 'brioche', categoryId: 'bread', title: 'Brioche buns (6)',
+    description: 'Soft burger-size buns, baked the same morning.',
+    priceCents: 1100, maxQty: 12,
+  },
+];
+
+const ZONES = [
+  { id: 'pickup', title: 'I will pick it up', cardTitle: 'Pickup at the bakehouse', feeCents: 0, pickup: true },
+  { id: 'a', title: 'Delivery - city centre (up to 5 km)', cardTitle: 'Delivery, city centre (up to 5 km)', feeCents: 600 },
+  { id: 'b', title: 'Delivery - outer districts (5-12 km)', cardTitle: 'Delivery, outer districts (5-12 km)', feeCents: 1100 },
+  { id: 'far', title: 'Delivery - further than 12 km', cardTitle: 'Further than 12 km', feeCents: null, unserved: true },
+];
+
+function categoryById(id) {
+  return CATEGORIES.find((c) => c.id === id) || null;
+}
+
+function itemById(id) {
+  return ITEMS.find((i) => i.id === id) || null;
+}
+
+function itemsInCategory(id) {
+  return ITEMS.filter((i) => i.categoryId === id);
+}
+
+function variantById(item, variantId) {
+  if (!item || !item.variants) return null;
+  return item.variants.find((v) => v.id === variantId) || null;
+}
+
+function zoneById(id) {
+  return ZONES.find((z) => z.id === id) || null;
+}
+
+function unitPriceCents(item, variantId) {
+  if (!item) return null;
+  if (item.variants) {
+    const v = variantById(item, variantId);
+    return v ? v.priceCents : null;
+  }
+  return item.priceCents;
+}
+
+function leadHoursFor(item) {
+  const category = categoryById(item ? item.categoryId : null);
+  return category ? category.leadHours : 0;
+}
+
+// ---- engine/format.js ----
+// Formatting helpers. All date maths is done in UTC so that the same input
+// always produces the same output - on the server, in the browser demo and in tests.
+// The shop's wall clock is treated as UTC and labelled "shop local time" for the customer.
+
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function money(cents) {
+  const sign = cents < 0 ? '-' : '';
+  const abs = Math.abs(Math.round(cents));
+  return `${sign}${SHOP.symbol}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
+}
+
+/** 'YYYY-MM-DD' for a timestamp, in UTC. */
+function isoDate(ts) {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+/** Midnight UTC of the day that contains ts. */
+function startOfDay(ts) {
+  return Date.parse(`${isoDate(ts)}T00:00:00Z`);
+}
+
+function dateToTs(iso, time = '00:00') {
+  return Date.parse(`${iso}T${time}:00Z`);
+}
+
+function weekdayOf(iso) {
+  return new Date(`${iso}T00:00:00Z`).getUTCDay();
+}
+
+/** 'Fri 25 Sep' - short and unambiguous for an international customer. */
+function humanDate(iso) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+/** '00:42' - used in the owner's night summary. */
+function humanTime(ts) {
+  const d = new Date(ts);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+function isClosedDay(iso) {
+  return SHOP.closedWeekdays.includes(weekdayOf(iso));
+}
+
+const MONTH_NAMES = MONTHS;
+
+// ---- engine/slots.js ----
+// Pickup and delivery time windows, and the rule that decides which of them
+// are still reachable given the item's lead time.
+
+
+
+const SLOTS = [
+  { id: 'am', title: 'Morning 08:00-12:00', start: '08:00' },
+  { id: 'pm', title: 'Afternoon 12:00-18:00', start: '12:00' },
+];
+
+function slotById(id) {
+  return SLOTS.find((s) => s.id === id) || null;
+}
+
+/** The earliest moment an order for this item can be handed over. */
+function earliestTs(now, leadHours) {
+  return now + leadHours * 60 * 60 * 1000;
+}
+
+function slotsForDate(iso, now, leadHours) {
+  if (isClosedDay(iso)) return [];
+  const limit = earliestTs(now, leadHours);
+  return SLOTS.filter((s) => dateToTs(iso, s.start) >= limit);
+}
+
+/** Up to `count` dates that still have at least one reachable slot. */
+function suggestDates(now, leadHours, count = 4) {
+  const out = [];
+  const first = startOfDay(earliestTs(now, leadHours));
+  for (let i = 0; out.length < count && i <= SHOP.maxDaysAhead; i += 1) {
+    const iso = isoDate(first + i * DAY_MS);
+    if (slotsForDate(iso, now, leadHours).length > 0) out.push(iso);
+  }
+  return out;
+}
+
+function lastBookableIso(now) {
+  return isoDate(startOfDay(now) + SHOP.maxDaysAhead * DAY_MS);
+}
+
+// ---- engine/validate.js ----
+// Input checks. Every function returns either { ok: true, value } or { ok: false, reason },
+// so the dialog can answer with a specific, human explanation instead of "invalid input".
+
+
+
+
+const LETTER = /\p{L}/u;
+
+function parseQuantity(text, maxQty) {
+  const trimmed = String(text || '').trim();
+  if (!/^\d{1,3}$/.test(trimmed)) return { ok: false, reason: 'not_a_number' };
+  const n = Number(trimmed);
+  if (n < 1) return { ok: false, reason: 'too_small' };
+  if (n > maxQty) return { ok: false, reason: 'too_many', max: maxQty };
+  return { ok: true, value: n };
+}
+
+function validateName(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (value.length < 2) return { ok: false, reason: 'too_short' };
+  if (value.length > 60) return { ok: false, reason: 'too_long' };
+  if (!LETTER.test(value)) return { ok: false, reason: 'no_letters' };
+  return { ok: true, value };
+}
+
+function validatePhone(text) {
+  const raw = String(text || '').trim();
+  if (/[A-Za-z]/.test(raw)) return { ok: false, reason: 'has_letters' };
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length < 7) return { ok: false, reason: 'too_short' };
+  if (digits.length > 15) return { ok: false, reason: 'too_long' };
+  // Kept exactly as the customer typed it (spacing tidied) - the owner has to dial it.
+  return { ok: true, value: raw.replace(/\s+/g, ' ') };
+}
+
+function validateAddress(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (value.length < 8) return { ok: false, reason: 'too_short' };
+  if (value.length > 140) return { ok: false, reason: 'too_long' };
+  if (!/\d/.test(value)) return { ok: false, reason: 'no_number' };
+  return { ok: true, value };
+}
+
+function validateNote(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (value.length > 120) return { ok: false, reason: 'too_long' };
+  return { ok: true, value };
+}
+
+/**
+ * Accepts what people actually type at night: 2026-09-25, 25.09, 25/09,
+ * 25 Sep, Sep 25, today, tomorrow. Returns an ISO date that is open,
+ * far enough ahead for this item's lead time and inside the booking window.
+ */
+function parseDate(text, now, leadHours) {
+  const raw = String(text || '').trim().toLowerCase();
+  if (!raw) return { ok: false, reason: 'unreadable' };
+
+  const today = startOfDay(now);
+  let iso = null;
+
+  if (raw === 'today') iso = isoDate(today);
+  else if (raw === 'tomorrow') iso = isoDate(today + DAY_MS);
+
+  if (!iso) {
+    const full = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (full) iso = `${full[1]}-${full[2]}-${full[3]}`;
+  }
+  if (!iso) {
+    const dm = raw.match(/^(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?$/);
+    if (dm) iso = buildIso(Number(dm[3] || 0), Number(dm[2]), Number(dm[1]), today);
+  }
+  if (!iso) {
+    const named = raw.match(/^(\d{1,2})\s*([a-z]{3,9})$/) || flip(raw.match(/^([a-z]{3,9})\s*(\d{1,2})$/));
+    if (named) {
+      const month = MONTH_NAMES.findIndex((m) => named[2].startsWith(m.toLowerCase())) + 1;
+      if (month > 0) iso = buildIso(0, month, Number(named[1]), today);
+    }
+  }
+  if (!iso) return { ok: false, reason: 'unreadable' };
+
+  const ts = Date.parse(`${iso}T00:00:00Z`);
+  if (Number.isNaN(ts) || isoDate(ts) !== iso) return { ok: false, reason: 'unreadable' };
+  if (ts < today) return { ok: false, reason: 'in_the_past' };
+  if (ts > today + SHOP.maxDaysAhead * DAY_MS) return { ok: false, reason: 'too_far', maxDays: SHOP.maxDaysAhead };
+  if (isClosedDay(iso)) return { ok: false, reason: 'closed_day', iso };
+  if (slotsForDate(iso, now, leadHours).length === 0) return { ok: false, reason: 'too_soon', iso, leadHours };
+  return { ok: true, value: iso };
+}
+
+function flip(match) {
+  return match ? [match[0], match[2], match[1]] : null;
+}
+
+/** Day/month without a year means the next occurrence of that day. */
+function buildIso(year, month, day, todayTs) {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  if (year) {
+    const y = year < 100 ? 2000 + year : year;
+    return `${y}-${pad(month)}-${pad(day)}`;
+  }
+  const thisYear = new Date(todayTs).getUTCFullYear();
+  const candidate = `${thisYear}-${pad(month)}-${pad(day)}`;
+  if (Date.parse(`${candidate}T00:00:00Z`) >= todayTs) return candidate;
+  return `${thisYear + 1}-${pad(month)}-${pad(day)}`;
+}
+
+// ---- engine/pricing.js ----
+// Price of a draft order. Money is kept in whole cents everywhere; the only
+// place it becomes a string is money() at display time.
+
+
+function quote(draft) {
+  const item = itemById(draft.itemId);
+  const unit = unitPriceCents(item, draft.variantId);
+  if (unit === null || unit === undefined) return null;
+
+  const qty = draft.qty || 1;
+  const zone = zoneById(draft.zoneId);
+  const deliveryCents = zone && !zone.unserved ? zone.feeCents : 0;
+  const subtotalCents = unit * qty;
+
+  const variant = variantById(item, draft.variantId);
+  const label = variant ? `${item.title}, ${variant.title}` : item.title;
+
+  return {
+    itemLabel: label,
+    unitCents: unit,
+    qty,
+    subtotalCents,
+    deliveryCents,
+    totalCents: subtotalCents + deliveryCents,
+    leadHours: leadHoursFor(item),
+    zoneTitle: zone ? zone.title : null,
+  };
+}
+
+/** Delivery has a minimum basket; pickup never does. */
+function deliveryAllowed(draft) {
+  const item = itemById(draft.itemId);
+  const unit = unitPriceCents(item, draft.variantId);
+  if (unit === null || unit === undefined) return false;
+  return unit * (draft.qty || 1) >= SHOP.deliveryMinimumCents;
+}
+
+// ---- engine/orders.js ----
+// Turning a finished draft into the order record that is stored and sent to the owner.
+
+
+
+
+
+/** CED-2309-014 - date of the order plus a running number, readable over the phone. */
+function orderNumber(now, sequence) {
+  const iso = isoDate(now);
+  return `CED-${iso.slice(8, 10)}${iso.slice(5, 7)}-${String(sequence).padStart(3, '0')}`;
+}
+
+function buildOrder(session, ctx) {
+  const d = session.draft;
+  const q = quote(d);
+  const zone = zoneById(d.zoneId);
+  return {
+    number: orderNumber(ctx.now, ctx.sequence),
+    placedAt: new Date(ctx.now).toISOString(),
+    chatId: ctx.chatId ?? null,
+    telegramUser: ctx.username ? `@${ctx.username}` : null,
+    customer: { name: d.name, phone: d.phone },
+    item: {
+      id: d.itemId,
+      variantId: d.variantId || null,
+      label: q.itemLabel,
+      qty: q.qty,
+      unitCents: q.unitCents,
+    },
+    handover: {
+      date: d.dateIso,
+      dateLabel: humanDate(d.dateIso),
+      slotId: d.slotId,
+      slotLabel: slotById(d.slotId) ? slotById(d.slotId).title : null,
+      method: zone && zone.pickup ? 'pickup' : 'delivery',
+      zoneId: d.zoneId,
+      zoneTitle: zone ? zone.cardTitle : null,
+      address: d.address || null,
+    },
+    notes: d.notes || null,
+    totals: {
+      subtotalCents: q.subtotalCents,
+      deliveryCents: q.deliveryCents,
+      totalCents: q.totalCents,
+    },
+    status: 'new',
+    receivedAtLabel: humanTime(ctx.now),
+  };
+}
+
+// ---- engine/text.js ----
+// Every sentence the bot says. Kept apart from the logic so the owner can
+// reword the shop's voice without touching the dialog, and so the tests can check
+// in one place that nothing unfinished ever ships.
+
+
+
+
+
+/** Telegram is sent parse_mode=HTML, so anything a customer typed is escaped first. */
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function partOfDay(now) {
+  const hour = new Date(now).getUTCHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function greeting(now, firstName) {
+  const who = firstName ? `, ${esc(firstName)}` : '';
+  return [
+    `${partOfDay(now)}${who}! 👋`,
+    '',
+    `You are chatting with <b>${SHOP.name}</b>. I take orders at any hour - the bakehouse reads them when the ovens go on.`,
+    '',
+    'What would you like to do?',
+  ].join('\n');
+}
+
+function menuCard() {
+  const blocks = CATEGORIES.map((category) => {
+    const lines = itemsInCategory(category.id).map((item) => {
+      if (item.variants) {
+        const range = item.variants.map((v) => `${v.title} ${money(v.priceCents)}`).join(' · ');
+        return `• <b>${item.title}</b>\n   ${item.description}\n   ${range}`;
+      }
+      return `• <b>${item.title}</b> - ${money(item.priceCents)}\n   ${item.description}`;
+    });
+    return `<b>${category.title.toUpperCase()}</b> (${category.note})\n${lines.join('\n')}`;
+  });
+  return `${blocks.join('\n\n')}\n\nPrices include tax. Delivery is added at the end.`;
+}
+
+function hoursCard() {
+  // Built from ZONES so the card can never drift away from what the bot charges.
+  const zones = ZONES.map((z) => {
+    if (z.unserved) return `• ${z.cardTitle} - we cannot deliver that far, but pickup is always open`;
+    if (z.pickup) return `• ${z.cardTitle} - free, ${SHOP.pickup.from}-${SHOP.pickup.to}`;
+    return `• ${z.cardTitle} - ${money(z.feeCents)}`;
+  }).join('\n');
+  return [
+    '<b>Pickup, delivery and hours</b>',
+    '',
+    `Open Tuesday to Sunday, ${SHOP.pickup.from}-${SHOP.pickup.to} (${SHOP.timezoneLabel}). Closed on Mondays.`,
+    '',
+    zones,
+    '',
+    `Delivery needs a basket of at least ${money(SHOP.deliveryMinimumCents)}.`,
+    '',
+    '<b>How much notice we need</b>',
+    ...CATEGORIES.map((c) => `• ${c.title} - ${c.leadHours} hours`),
+  ].join('\n');
+}
+
+const ASK_QUESTION = [
+  'Of course. Type your question here and I will pass it to the bakehouse.',
+  '',
+  `Someone answers in person from ${SHOP.pickup.from} (${SHOP.timezoneLabel}). If it cannot wait, write to ${SHOP.humanHandoff} directly.`,
+].join('\n');
+
+function anythingElse() {
+  return 'Anything else I can do for you?';
+}
+
+function questionSent() {
+  return `Passed on. ✅ The bakehouse will reply in this chat from ${SHOP.pickup.from} (${SHOP.timezoneLabel}). Anything else I can do right now?`;
+}
+
+/** A free-typed message outside an order is a message for a person, not an error. */
+function messageForwarded() {
+  return `Got it - I have passed that to the bakehouse, and someone will reply here from ${SHOP.pickup.from} (${SHOP.timezoneLabel}).`;
+}
+
+function askForWords() {
+  return 'Write your question as a message and I will pass it on - or tap Back to return to the menu.';
+}
+
+function cannotSeeAttachments() {
+  return 'I cannot open pictures, voice notes or files - please describe it in words and I will pass it on.';
+}
+
+const CANCELLED = 'No problem - I have dropped that order. Nothing was sent to the bakehouse. Start again whenever you like.';
+
+const NOTHING_TO_CANCEL = 'There is no order in progress. Tap "Place an order" whenever you are ready.';
+
+function stale() {
+  return 'That button belongs to an earlier step - here is where we are now.';
+}
+
+function unexpectedText() {
+  return 'I did not catch that. Please use the buttons below, or type /cancel to start over.';
+}
+
+function summary(session) {
+  const d = session.draft;
+  const q = quote(d);
+  const lines = [
+    '<b>Here is your order</b>',
+    '',
+    `🧁 ${esc(q.itemLabel)} × ${q.qty} - ${money(q.subtotalCents)}`,
+    `📅 ${humanDate(d.dateIso)}, ${slotById(d.slotId).title}`,
+  ];
+  if (d.address) lines.push(`🚚 Delivery to ${esc(d.address)} - ${money(q.deliveryCents)}`);
+  else lines.push('🏠 Pickup at the bakehouse - free');
+  if (d.notes) lines.push(`📝 ${esc(d.notes)}`);
+  lines.push(`👤 ${esc(d.name)}, ${esc(d.phone)}`);
+  lines.push('', `<b>Total: ${money(q.totalCents)}</b>`, 'Payment on pickup or on delivery - card or cash.');
+  return lines.join('\n');
+}
+
+function confirmed(order) {
+  return [
+    `Booked! ✅ Your order number is <b>${order.number}</b>.`,
+    '',
+    `${esc(order.item.label)} × ${order.item.qty}, ready ${order.handover.dateLabel}, ${esc(order.handover.slotLabel)}.`,
+    order.handover.method === 'delivery'
+      ? `We deliver to ${esc(order.handover.address)}.`
+      : `Pickup at the bakehouse, ${SHOP.pickup.from}-${SHOP.pickup.to}.`,
+    `Total ${money(order.totals.totalCents)}.`,
+    '',
+    `The bakehouse sees this order right away and will confirm in this chat from ${SHOP.pickup.from}. Need to change something? Write here, quote ${order.number}, and a person will pick it up.`,
+  ].join('\n');
+}
+
+/** What lands on the owner's phone the moment an order is finished. */
+function ownerAlert(order) {
+  const lines = [
+    `🧾 <b>New order ${order.number}</b> (${order.receivedAtLabel})`,
+    `${esc(order.item.label)} × ${order.item.qty}`,
+    `${order.handover.dateLabel}, ${esc(order.handover.slotLabel)}`,
+    order.handover.method === 'delivery'
+      ? `Deliver: ${esc(order.handover.address)} (${esc(order.handover.zoneTitle)})`
+      : 'Pickup',
+  ];
+  if (order.notes) lines.push(`Note: ${esc(order.notes)}`);
+  lines.push(`${esc(order.customer.name)}, ${esc(order.customer.phone)}${order.telegramUser ? ` (${esc(order.telegramUser)})` : ''}`);
+  lines.push(`<b>${money(order.totals.totalCents)}</b>`);
+  return lines.join('\n');
+}
+
+function ownerQuestion(chat, question) {
+  return [
+    `💬 <b>Question from ${esc(chat.name || 'a customer')}</b>${chat.username ? ` (@${esc(chat.username)})` : ''}`,
+    esc(question),
+    '',
+    'Reply in the bot chat - the customer sees it there.',
+  ].join('\n');
+}
+
+/** The one message the owner reads with the first coffee. */
+function nightSummary(orders, questions, fromTs, toTs) {
+  if (orders.length === 0 && questions === 0) {
+    return `☀️ <b>Night summary</b> (${humanTime(fromTs)}-${humanTime(toTs)})\n\nNo orders came in tonight.`;
+  }
+  const total = orders.reduce((sum, o) => sum + o.totals.totalCents, 0);
+  const lines = [
+    `☀️ <b>Night summary</b> (${humanTime(fromTs)}-${humanTime(toTs)})`,
+    '',
+    `<b>${orders.length} order${orders.length === 1 ? '' : 's'} · ${money(total)}</b>`,
+    '',
+  ];
+  for (const o of orders) {
+    lines.push(`• ${o.number} - ${esc(o.item.label)} × ${o.item.qty}, ${o.handover.dateLabel} ${o.handover.method === 'delivery' ? '🚚' : '🏠'} - ${money(o.totals.totalCents)}`);
+  }
+  if (questions > 0) {
+    lines.push('', `${questions} question${questions === 1 ? '' : 's'} waiting for a personal answer.`);
+  }
+  return lines.join('\n');
+}
+
+const ERRORS = {
+  qty_not_a_number: (max) => `Please send a plain number, from 1 to ${max}.`,
+  qty_too_small: () => 'At least one, please.',
+  qty_too_many: (max) => `We can bake up to ${max} of these in one order. For a bigger run, send /start and choose "Talk to a human" - the bakehouse arranges those personally.`,
+  name_too_short: () => 'I need a name for the order - at least two characters.',
+  name_too_long: () => 'That name is too long for the label. Up to 60 characters, please.',
+  name_no_letters: () => 'That does not look like a name. Letters, please.',
+  phone_has_letters: () => 'Numbers only, please - "+", spaces and dashes are fine. For example: +1 415 555 0199.',
+  phone_too_short: () => 'That number looks too short. Please include the area code.',
+  phone_too_long: () => 'That number looks too long. Please check it.',
+  address_too_short: () => 'Please send the full address - street, house number and flat if any.',
+  address_too_long: () => 'That address is too long for the driver. Up to 140 characters, please.',
+  address_no_number: () => 'The address needs a house or building number.',
+  note_too_long: () => 'Please keep the note under 120 characters.',
+  date_unreadable: () => 'I could not read that date. Try day first - 25.09, 25 Sep or 2026-09-25 - or use the buttons.',
+  date_in_the_past: () => 'That day has passed. Which day ahead works for you?',
+  date_too_far: (days) => `We take orders up to ${days} days ahead.`,
+  date_closed_day: (iso) => `${humanDate(iso)} is a Monday - the bakehouse is closed. Pick another day.`,
+  date_too_soon: (iso, hours) => `${humanDate(iso)} is too soon: this one needs ${hours} hours in the oven and on the bench. Pick a later day, or use the buttons below.`,
+  slot_gone: (iso) => `Nothing is left on ${humanDate(iso)} for this item. Please pick another day.`,
+  delivery_minimum: (min) => `Delivery starts at ${money(min)} per order. This one is under that, so pickup it is - or go back and add a little more.`,
+  zone_unserved: () => 'We do not deliver further than 12 km - the cakes do not travel well. Pickup is free, and the bakehouse is open until 18:00.',
+};
+
+const T = { esc, partOfDay, greeting, menuCard, hoursCard, ASK_QUESTION, anythingElse, questionSent, messageForwarded, askForWords, cannotSeeAttachments, CANCELLED, NOTHING_TO_CANCEL, stale, unexpectedText, summary, confirmed, ownerAlert, ownerQuestion, nightSummary, ERRORS };
+
+// ---- engine/dialog.js ----
+// The order dialog: a pure state machine.
+//
+//   handle(session, event, ctx) -> { session, actions }
+//
+// It never touches the network, the clock or the disk - the caller passes `ctx.now`
+// and applies the returned actions. That is what lets the same file run the real
+// Telegram bot, the browser demo and the tests without a second implementation.
+
+
+
+
+
+
+
+
+/** Order of the questions. nextStep() walks this list and skips what is already known. */
+const FLOW = ['category', 'item', 'variant', 'qty', 'date', 'slot', 'zone', 'address', 'notes', 'name', 'phone', 'confirm'];
+
+function newSession() {
+  return { step: 'idle', draft: {}, trail: [], greeted: false };
+}
+
+function handle(session, event, ctx) {
+  const s = clone(session || newSession());
+  const out = [];
+  const api = { session: s, actions: out, ctx };
+
+  if (event.type === 'command') return command(api, event);
+  if (event.type === 'callback') return callback(api, event);
+  if (event.type === 'text') return text(api, event);
+  if (event.type === 'unsupported') {
+    out.push(send(T.cannotSeeAttachments()));
+    return ask(api);
+  }
+  return { session: s, actions: out };
+}
+
+/** The question for the step the session is on right now. */
+function prompt(session, ctx) {
+  const d = session.draft;
+  switch (session.step) {
+    case 'idle':
+      return {
+        text: session.greeted ? T.anythingElse() : T.greeting(ctx.now, ctx.firstName),
+        keyboard: mainMenu(),
+      };
+
+    case 'resume':
+      return {
+        text: 'You already have an order in progress. Would you like to carry on with it, or start a new one?',
+        keyboard: rows([[btn('resume', 'Carry on', 'go')], [btn('resume', 'Start a new order', 'new')]]),
+      };
+
+    case 'question':
+      return { text: T.ASK_QUESTION, keyboard: rows([[btn('question', '← Back', 'back')]]) };
+
+    case 'category':
+      return {
+        text: 'What are we baking for you?',
+        keyboard: rows([
+          ...CATEGORIES.map((c) => [btn('category', `${c.title} - ${c.note}`, c.id)]),
+          [btn('category', '← Back', 'back')],
+        ]),
+      };
+
+    case 'item': {
+      const category = categoryById(d.categoryId);
+      return {
+        text: `<b>${category.title}</b> - ${category.note}.\n\nPick one:`,
+        keyboard: rows([
+          ...itemsInCategory(category.id).map((i) => [btn('item', itemButton(i), i.id)]),
+          [btn('item', '← Back', 'back')],
+        ]),
+      };
+    }
+
+    case 'variant': {
+      const item = itemById(d.itemId);
+      return {
+        text: `<b>${item.title}</b>\n${item.description}\n\nWhich size?`,
+        keyboard: rows([
+          ...item.variants.map((v) => [btn('variant', `${v.title} - ${money(v.priceCents)}`, v.id)]),
+          [btn('variant', '← Back', 'back')],
+        ]),
+      };
+    }
+
+    case 'qty': {
+      const item = itemById(d.itemId);
+      const shortcuts = [];
+      for (let n = 1; n <= Math.min(item.maxQty, 6); n += 1) shortcuts.push(btn('qty', String(n), String(n)));
+      return {
+        text: `How many?${item.maxQty > 6 ? `\n\nTap a number, or type any number up to ${item.maxQty}.` : ''}`,
+        keyboard: rows([...chunk(shortcuts, 3), [btn('qty', '← Back', 'back')]]),
+      };
+    }
+
+    case 'date': {
+      const item = itemById(d.itemId);
+      const lead = categoryById(item.categoryId).leadHours;
+      const dates = suggestDates(ctx.now, lead, 4);
+      return {
+        text: [
+          `Which day would you like it?`,
+          '',
+          `This one needs ${lead} hours, so the earliest is <b>${humanDate(dates[0])}</b>.`,
+          'Tap a day, or type one - day first: 25.09, 25 Sep or 2026-09-25.',
+        ].join('\n'),
+        keyboard: rows([
+          ...chunk(dates.map((iso) => btn('date', humanDate(iso), iso)), 2),
+          [btn('date', '← Back', 'back')],
+        ]),
+      };
+    }
+
+    case 'slot': {
+      const item = itemById(d.itemId);
+      const lead = categoryById(item.categoryId).leadHours;
+      const open = slotsForDate(d.dateIso, ctx.now, lead);
+      return {
+        text: `<b>${humanDate(d.dateIso)}</b> - when suits you?`,
+        keyboard: rows([
+          ...open.map((sl) => [btn('slot', sl.title, sl.id)]),
+          [btn('slot', '← Back', 'back')],
+        ]),
+      };
+    }
+
+    case 'zone': {
+      const q = quote(d);
+      const canDeliver = deliveryAllowed(d);
+      const offered = ZONES.filter((z) => z.pickup || canDeliver);
+      return {
+        text: [
+          'Pickup or delivery?',
+          '',
+          `Your order so far: ${T.esc(q.itemLabel)} × ${q.qty} - ${money(q.subtotalCents)}.`,
+          canDeliver
+            ? `Delivery is added on top; pickup is free, ${SHOP.pickup.from}-${SHOP.pickup.to}.`
+            : `Delivery starts at ${money(SHOP.deliveryMinimumCents)} per order, so this one is pickup - or go back and add a little more.`,
+        ].join('\n'),
+        keyboard: rows([
+          ...offered.map((z) => [btn('zone', z.unserved ? z.title : `${z.title}${z.feeCents ? ` - ${money(z.feeCents)}` : ' - free'}`, z.id)]),
+          [btn('zone', '← Back', 'back')],
+        ]),
+      };
+    }
+
+    case 'address':
+      return {
+        text: 'What is the delivery address?\n\nStreet, house number and flat - the driver reads exactly what you write.',
+        keyboard: rows([[btn('address', '← Back', 'back')]]),
+      };
+
+    case 'notes': {
+      const item = itemById(d.itemId);
+      return {
+        text: [
+          'Anything we should know?',
+          '',
+          item.allowsInscription
+            ? 'Allergies, a message to pipe on the cake, a doorbell that never works - write it here.'
+            : 'Allergies, packaging, a doorbell that never works - write it here.',
+        ].join('\n'),
+        keyboard: rows([[btn('notes', 'Nothing to add', 'skip')], [btn('notes', '← Back', 'back')]]),
+      };
+    }
+
+    case 'name': {
+      const buttons = [];
+      if (ctx.firstName) buttons.push([btn('name', `Use "${ctx.firstName}"`, 'self')]);
+      buttons.push([btn('name', '← Back', 'back')]);
+      return { text: 'Whose name should the order be under?', keyboard: rows(buttons) };
+    }
+
+    case 'phone':
+      return {
+        text: 'And a phone number, in case the bakehouse needs to reach you on the day.',
+        keyboard: rows([[btn('phone', '← Back', 'back')]]),
+      };
+
+    case 'confirm':
+      return {
+        text: T.summary(session),
+        keyboard: rows([
+          [btn('confirm', 'Confirm the order ✅', 'yes')],
+          [btn('confirm', 'Change something', 'edit')],
+          [btn('confirm', 'Cancel the order', 'cancel')],
+        ]),
+      };
+
+    case 'edit':
+      return {
+        text: 'What would you like to change?',
+        keyboard: rows([
+          [btn('edit', 'The item', 'item')],
+          [btn('edit', 'The day or time', 'day')],
+          [btn('edit', 'Pickup or delivery', 'delivery')],
+          [btn('edit', 'The note', 'note')],
+          [btn('edit', 'Name or phone', 'contact')],
+          [btn('edit', '← Back to the order', 'back')],
+        ]),
+      };
+
+    default:
+      return { text: T.greeting(ctx.now, ctx.firstName), keyboard: mainMenu() };
+  }
+}
+
+// ---------------------------------------------------------------- commands
+
+function command(api, event) {
+  const { session: s, ctx } = api;
+  switch (event.name) {
+    case 'start':
+      if (hasProgress(s)) {
+        s.step = 'resume';
+        return ask(api);
+      }
+      reset(s);
+      return ask(api);
+
+    case 'cancel':
+      if (!hasProgress(s) && s.step === 'idle') {
+        api.actions.push(send(T.NOTHING_TO_CANCEL, mainMenu()));
+        return done(api);
+      }
+      reset(s);
+      api.actions.push(send(T.CANCELLED));
+      return ask(api);
+
+    case 'menu':
+      api.actions.push(send(T.menuCard()));
+      if (s.step === 'idle') return ask(api);
+      return done(api);
+
+    case 'help':
+      api.actions.push(send(T.hoursCard()));
+      if (s.step === 'idle') return ask(api);
+      return done(api);
+
+    case 'idle': {
+      // The confirmation promises "write here if you need to change something",
+      // so anything typed outside an order goes to a person instead of being refused.
+      if (!body) { api.actions.push(send(T.unexpectedText())); return ask(api); }
+      api.actions.push({ type: 'owner', kind: 'question', text: T.ownerQuestion({ name: ctx.firstName, username: ctx.username }, body) });
+      api.actions.push(send(T.messageForwarded()));
+      return ask(api);
+    }
+
+    default:
+      api.actions.push(send(T.unexpectedText()));
+      return ask(api);
+  }
+}
+
+// --------------------------------------------------------------- callbacks
+
+function callback(api, event) {
+  const { session: s, ctx } = api;
+  const parsed = parseData(event.data);
+  api.actions.push({ type: 'ack' });
+
+  if (!parsed) return ask(api);
+
+  // A button from a message further up the chat: say so and re-ask where we are.
+  if (parsed.step !== s.step) {
+    api.actions.push(send(T.stale()));
+    return ask(api);
+  }
+
+  if (parsed.value === 'back') return back(api);
+
+  switch (s.step) {
+    case 'idle':
+      if (parsed.value === 'order') return goForward(api, 'category');
+      if (parsed.value === 'menu') { api.actions.push(send(T.menuCard())); return ask(api); }
+      if (parsed.value === 'hours') { api.actions.push(send(T.hoursCard())); return ask(api); }
+      if (parsed.value === 'ask') { s.step = 'question'; return ask(api); }
+      return ask(api);
+
+    case 'resume':
+      if (parsed.value === 'go') { s.step = resumeStep(s); return ask(api); }
+      reset(s);
+      return goForward(api, 'category');
+
+    case 'category': {
+      if (!categoryById(parsed.value)) return ask(api);
+      push(s);
+      s.draft.categoryId = parsed.value;
+      return advance(api);
+    }
+
+    case 'item': {
+      const item = itemById(parsed.value);
+      if (!item || item.categoryId !== s.draft.categoryId) return ask(api);
+      push(s);
+      s.draft.itemId = item.id;
+      if (item.maxQty === 1) s.draft.qty = 1;
+      return advance(api);
+    }
+
+    case 'variant': {
+      const item = itemById(s.draft.itemId);
+      if (!variantById(item, parsed.value)) return ask(api);
+      push(s);
+      s.draft.variantId = parsed.value;
+      return advance(api);
+    }
+
+    case 'qty': {
+      const item = itemById(s.draft.itemId);
+      const check = parseQuantity(parsed.value, item.maxQty);
+      if (!check.ok) return ask(api);
+      push(s);
+      s.draft.qty = check.value;
+      return advance(api);
+    }
+
+    case 'date': {
+      const item = itemById(s.draft.itemId);
+      const lead = categoryById(item.categoryId).leadHours;
+      const check = parseDate(parsed.value, ctx.now, lead);
+      if (!check.ok) { api.actions.push(send(dateError(check))); return ask(api); }
+      push(s);
+      s.draft.dateIso = check.value;
+      return advance(api);
+    }
+
+    case 'slot': {
+      const item = itemById(s.draft.itemId);
+      const lead = categoryById(item.categoryId).leadHours;
+      const open = slotsForDate(s.draft.dateIso, ctx.now, lead);
+      if (!open.some((sl) => sl.id === parsed.value)) {
+        api.actions.push(send(T.ERRORS.slot_gone(s.draft.dateIso)));
+        s.draft.dateIso = null;
+        s.step = 'date';
+        return ask(api);
+      }
+      push(s);
+      s.draft.slotId = parsed.value;
+      return advance(api);
+    }
+
+    case 'zone': {
+      const zone = zoneById(parsed.value);
+      if (!zone) return ask(api);
+      if (zone.unserved) { api.actions.push(send(T.ERRORS.zone_unserved())); return ask(api); }
+      if (!zone.pickup && !deliveryAllowed(s.draft)) {
+        api.actions.push(send(T.ERRORS.delivery_minimum(SHOP.deliveryMinimumCents)));
+        return ask(api);
+      }
+      push(s);
+      s.draft.zoneId = zone.id;
+      if (zone.pickup) s.draft.address = null;
+      return advance(api);
+    }
+
+    case 'notes':
+      if (parsed.value === 'skip') { push(s); s.draft.notes = ''; return advance(api); }
+      return ask(api);
+
+    case 'name':
+      if (parsed.value === 'self' && ctx.firstName) {
+        const check = validateName(ctx.firstName);
+        if (check.ok) { push(s); s.draft.name = check.value; return advance(api); }
+      }
+      return ask(api);
+
+    case 'confirm':
+      if (parsed.value === 'yes') return placeOrder(api);
+      if (parsed.value === 'edit') { push(s); s.step = 'edit'; return ask(api); }
+      if (parsed.value === 'cancel') { reset(s); api.actions.push(send(T.CANCELLED)); return ask(api); }
+      return ask(api);
+
+    case 'edit': {
+      const d = s.draft;
+      push(s);
+      if (parsed.value === 'item') {
+        // A different item changes both the lead time and the basket, so the day and the
+        // delivery choice go with it - otherwise the summary can show a delivery the
+        // basket is no longer big enough for.
+        d.categoryId = null; d.itemId = null; d.variantId = null; d.qty = null;
+        d.dateIso = null; d.slotId = null; d.zoneId = null; d.address = null;
+        s.step = 'category';
+      }
+      else if (parsed.value === 'day') { d.dateIso = null; d.slotId = null; s.step = 'date'; }
+      else if (parsed.value === 'delivery') { d.zoneId = null; d.address = null; s.step = 'zone'; }
+      else if (parsed.value === 'note') { d.notes = null; s.step = 'notes'; }
+      else if (parsed.value === 'contact') { d.name = null; d.phone = null; s.step = 'name'; }
+      return ask(api);
+    }
+
+    default:
+      return ask(api);
+  }
+}
+
+// ------------------------------------------------------------------- text
+
+function text(api, event) {
+  const { session: s, ctx } = api;
+  const body = String(event.text || '').trim();
+
+  if (s.step === 'question') {
+    if (!body) { api.actions.push(send(T.askForWords())); return ask(api); }
+    api.actions.push({ type: 'owner', kind: 'question', text: T.ownerQuestion({ name: ctx.firstName, username: ctx.username }, body) });
+    s.step = 'idle';
+    api.actions.push(send(T.questionSent()));
+    return ask(api);
+  }
+
+  switch (s.step) {
+    case 'qty': {
+      const item = itemById(s.draft.itemId);
+      const check = parseQuantity(body, item.maxQty);
+      if (!check.ok) { api.actions.push(send(qtyError(check, item.maxQty))); return ask(api); }
+      push(s);
+      s.draft.qty = check.value;
+      return advance(api);
+    }
+
+    case 'date': {
+      const item = itemById(s.draft.itemId);
+      const lead = categoryById(item.categoryId).leadHours;
+      const check = parseDate(body, ctx.now, lead);
+      if (!check.ok) { api.actions.push(send(dateError(check))); return ask(api); }
+      push(s);
+      s.draft.dateIso = check.value;
+      return advance(api);
+    }
+
+    case 'address': {
+      const check = validateAddress(body);
+      if (!check.ok) { api.actions.push(send(T.ERRORS[`address_${check.reason}`]())); return ask(api); }
+      push(s);
+      s.draft.address = check.value;
+      return advance(api);
+    }
+
+    case 'notes': {
+      const check = validateNote(body);
+      if (!check.ok) { api.actions.push(send(T.ERRORS.note_too_long())); return ask(api); }
+      push(s);
+      s.draft.notes = check.value;
+      return advance(api);
+    }
+
+    case 'name': {
+      const check = validateName(body);
+      if (!check.ok) { api.actions.push(send(T.ERRORS[`name_${check.reason}`]())); return ask(api); }
+      push(s);
+      s.draft.name = check.value;
+      return advance(api);
+    }
+
+    case 'phone': {
+      const check = validatePhone(body);
+      if (!check.ok) { api.actions.push(send(T.ERRORS[`phone_${check.reason}`]())); return ask(api); }
+      push(s);
+      s.draft.phone = check.value;
+      return advance(api);
+    }
+
+    case 'idle': {
+      // The confirmation promises "write here if you need to change something",
+      // so anything typed outside an order goes to a person instead of being refused.
+      if (!body) { api.actions.push(send(T.unexpectedText())); return ask(api); }
+      api.actions.push({ type: 'owner', kind: 'question', text: T.ownerQuestion({ name: ctx.firstName, username: ctx.username }, body) });
+      api.actions.push(send(T.messageForwarded()));
+      return ask(api);
+    }
+
+    default:
+      api.actions.push(send(T.unexpectedText()));
+      return ask(api);
+  }
+}
+
+// -------------------------------------------------------------- machinery
+
+function placeOrder(api) {
+  const { session: s, ctx } = api;
+  // Prices or distances may have drifted while the chat was open - check once more.
+  const zone = zoneById(s.draft.zoneId);
+  if (zone && !zone.pickup && !deliveryAllowed(s.draft)) {
+    api.actions.push(send(T.ERRORS.delivery_minimum(SHOP.deliveryMinimumCents)));
+    s.draft.zoneId = null;
+    s.draft.address = null;
+    s.step = 'zone';
+    return ask(api);
+  }
+  const item = itemById(s.draft.itemId);
+  const lead = categoryById(item.categoryId).leadHours;
+  if (!slotsForDate(s.draft.dateIso, ctx.now, lead).some((sl) => sl.id === s.draft.slotId)) {
+    api.actions.push(send(T.ERRORS.slot_gone(s.draft.dateIso)));
+    s.draft.dateIso = null;
+    s.draft.slotId = null;
+    s.step = 'date';
+    return ask(api);
+  }
+
+  const order = buildOrder(s, ctx);
+  api.actions.push({ type: 'save_order', order });
+  api.actions.push(send(T.confirmed(order)));
+  api.actions.push({ type: 'owner', kind: 'order', text: T.ownerAlert(order), order });
+  reset(s);
+  return ask(api);
+}
+
+/** Move to the first question in FLOW that still has no answer. */
+function advance(api) {
+  const { session: s } = api;
+  const from = FLOW.indexOf(s.step);
+  for (let i = from + 1; i < FLOW.length; i += 1) {
+    const step = FLOW[i];
+    if (applicable(step, s.draft) && !answered(step, s.draft)) { s.step = step; return ask(api); }
+  }
+  s.step = 'confirm';
+  return ask(api);
+}
+
+function goForward(api, step) {
+  push(api.session);
+  api.session.step = step;
+  return ask(api);
+}
+
+function back(api) {
+  const { session: s } = api;
+  const previous = s.trail.pop();
+  if (!previous) { reset(s); return ask(api); }
+  s.step = previous.step;
+  s.draft = previous.draft;
+  return ask(api);
+}
+
+function applicable(step, draft) {
+  const item = itemById(draft.itemId);
+  if (step === 'variant') return Boolean(item && item.variants);
+  if (step === 'qty') return Boolean(item && item.maxQty > 1);
+  if (step === 'address') {
+    const zone = zoneById(draft.zoneId);
+    return Boolean(zone && !zone.pickup);
+  }
+  return true;
+}
+
+function answered(step, draft) {
+  const key = {
+    category: 'categoryId', item: 'itemId', variant: 'variantId', qty: 'qty',
+    date: 'dateIso', slot: 'slotId', zone: 'zoneId', address: 'address',
+    notes: 'notes', name: 'name', phone: 'phone',
+  }[step];
+  if (!key) return false;
+  const value = draft[key];
+  return value !== null && value !== undefined && value !== false;
+}
+
+/** Where "carry on" puts a customer who came back with /start. */
+function resumeStep(s) {
+  for (const step of FLOW) {
+    if (applicable(step, s.draft) && !answered(step, s.draft)) return step;
+  }
+  return 'confirm';
+}
+
+function hasProgress(s) {
+  return Boolean(s.draft && Object.keys(s.draft).some((k) => s.draft[k] !== null && s.draft[k] !== undefined));
+}
+
+function ask(api) {
+  const p = prompt(api.session, api.ctx);
+  if (api.session.step === 'idle') api.session.greeted = true;
+  api.actions.push(send(p.text, p.keyboard));
+  return { session: api.session, actions: api.actions };
+}
+
+function done(api) {
+  return { session: api.session, actions: api.actions };
+}
+
+function reset(s) {
+  // `greeted` survives a reset: nobody wants "Good evening" three times in one chat.
+  s.step = 'idle';
+  s.draft = {};
+  s.trail = [];
+}
+
+function push(s) {
+  s.trail.push({ step: s.step, draft: clone(s.draft) });
+  if (s.trail.length > 30) s.trail.shift();
+}
+
+function send(text, keyboard) {
+  return keyboard ? { type: 'send', text, keyboard } : { type: 'send', text };
+}
+
+function mainMenu() {
+  return rows([
+    [btn('idle', '🧁 Place an order', 'order')],
+    [btn('idle', '📋 Menu & prices', 'menu')],
+    [btn('idle', '🚚 Pickup, delivery & hours', 'hours')],
+    [btn('idle', '💬 Talk to a human', 'ask')],
+  ]);
+}
+
+function itemButton(item) {
+  if (item.variants) {
+    const cheapest = Math.min(...item.variants.map((v) => v.priceCents));
+    return `${item.title} - from ${money(cheapest)}`;
+  }
+  return `${item.title} - ${money(item.priceCents)}`;
+}
+
+function qtyError(check, max) {
+  if (check.reason === 'too_many') return T.ERRORS.qty_too_many(max);
+  if (check.reason === 'too_small') return T.ERRORS.qty_too_small();
+  return T.ERRORS.qty_not_a_number(max);
+}
+
+function dateError(check) {
+  if (check.reason === 'closed_day') return T.ERRORS.date_closed_day(check.iso);
+  if (check.reason === 'too_soon') return T.ERRORS.date_too_soon(check.iso, check.leadHours);
+  if (check.reason === 'too_far') return T.ERRORS.date_too_far(check.maxDays);
+  if (check.reason === 'in_the_past') return T.ERRORS.date_in_the_past();
+  return T.ERRORS.date_unreadable();
+}
+
+/** Split a flat list of buttons into rows of `size`, so wide keyboards stay readable. */
+function chunk(list, size) {
+  const out = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+function rows(list) {
+  return { rows: list };
+}
+
+/** Telegram allows 64 bytes of callback_data - "step|value" stays far below that. */
+function btn(step, label, value) {
+  return { text: label, data: `${step}|${value}` };
+}
+
+function parseData(data) {
+  const raw = String(data || '');
+  const sep = raw.indexOf('|');
+  if (sep < 0) return null;
+  return { step: raw.slice(0, sep), value: raw.slice(sep + 1) };
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+const INTERNAL = { FLOW, applicable, answered, parseData };
+
+// ---- engine/harness.js ----
+// A tiny in-memory runtime for the dialog: it applies the actions the state machine
+// returns and remembers what happened. The browser demo and the tests both run on it,
+// so what you see on screen is produced by exactly the code the real bot runs.
+// The live bot uses the same actions but sends them to Telegram and to storage instead.
+
+
+function createChat(options = {}) {
+  const chat = {
+    session: newSession(),
+    now: options.now ?? Date.now(),
+    firstName: options.firstName ?? null,
+    username: options.username ?? null,
+    chatId: options.chatId ?? 1,
+    sequence: options.sequence ?? 1,
+    messages: [],      // { from: 'bot' | 'customer', text, keyboard }
+    orders: [],
+    ownerMessages: [], // { kind, text, at }
+
+    /** Advance the fake clock, e.g. between two customers in a simulated night. */
+    setNow(ts) { chat.now = ts; return chat; },
+
+    ctx() {
+      return {
+        now: chat.now,
+        firstName: chat.firstName,
+        username: chat.username,
+        chatId: chat.chatId,
+        sequence: chat.sequence,
+      };
+    },
+
+    /** The keyboard shown by the last bot message, if any. */
+    keyboard() {
+      for (let i = chat.messages.length - 1; i >= 0; i -= 1) {
+        if (chat.messages[i].from === 'bot' && chat.messages[i].keyboard) return chat.messages[i].keyboard;
+      }
+      return null;
+    },
+
+    lastText() {
+      for (let i = chat.messages.length - 1; i >= 0; i -= 1) {
+        if (chat.messages[i].from === 'bot') return chat.messages[i].text;
+      }
+      return '';
+    },
+
+    apply(event, label) {
+      if (label) chat.messages.push({ from: 'customer', text: label });
+      const result = handle(chat.session, event, chat.ctx());
+      chat.session = result.session;
+      for (const action of result.actions) {
+        if (action.type === 'send') chat.messages.push({ from: 'bot', text: action.text, keyboard: action.keyboard || null });
+        else if (action.type === 'save_order') { chat.orders.push(action.order); chat.sequence += 1; }
+        else if (action.type === 'owner') chat.ownerMessages.push({ kind: action.kind, text: action.text, at: chat.now });
+      }
+      return result.actions;
+    },
+
+    start() { return chat.apply({ type: 'command', name: 'start' }, '/start'); },
+    command(name) { return chat.apply({ type: 'command', name }, `/${name}`); },
+    type(text) { return chat.apply({ type: 'text', text }, text); },
+
+    /** Press a button by its visible label, the way a customer does. */
+    tap(label) {
+      const keyboard = chat.keyboard();
+      const button = keyboard && keyboard.rows.flat().find((b) => b.text === label);
+      if (!button) throw new Error(`No button "${label}". Visible: ${describe(keyboard)}`);
+      return chat.apply({ type: 'callback', data: button.data }, button.text);
+    },
+
+    /** Same, but matching part of the label - keeps written scenarios readable. */
+    tapLike(fragment) {
+      const keyboard = chat.keyboard();
+      const needle = fragment.toLowerCase();
+      const all = keyboard ? keyboard.rows.flat() : [];
+      // "6 servings" must not also match "16 servings", so a label that starts with
+      // the fragment wins over one that merely contains it.
+      const starts = all.filter((b) => b.text.toLowerCase().startsWith(needle));
+      const found = starts.length > 0 ? starts : all.filter((b) => b.text.toLowerCase().includes(needle));
+      if (found.length === 0) throw new Error(`No button matching "${fragment}". Visible: ${describe(keyboard)}`);
+      if (found.length > 1) throw new Error(`"${fragment}" matches ${found.length} buttons: ${found.map((b) => b.text).join(' / ')}`);
+      return chat.apply({ type: 'callback', data: found[0].data }, found[0].text);
+    },
+
+    /** Press a button that is no longer on screen - the stale-button case. */
+    tapRaw(data, label) {
+      return chat.apply({ type: 'callback', data }, label || data);
+    },
+
+    currentPrompt() { return prompt(chat.session, chat.ctx()); },
+  };
+  return chat;
+}
+
+function describe(keyboard) {
+  if (!keyboard) return '(no buttons)';
+  return keyboard.rows.flat().map((b) => `"${b.text}"`).join(', ');
+}
+
+// ---- demo/scenarios.js ----
+// The simulated night used by the demo page and by the tests.
+//
+// These are not recordings and not screenshots: each line below is fed to the real
+// dialog engine, and every number on the page (orders, revenue, answer time) comes
+// out of running them. Cedarline Bakehouse, its customers and this night are invented.
+
+
+/** The night the demo replays. Fixed date, so the page shows the same night every time. */
+const NIGHT_START = Date.parse('2026-09-23T22:05:00Z');
+
+const MIN = 60 * 1000;
+
+const SCENARIOS = [
+  {
+    id: 'birthday-cake',
+    at: 15 * MIN,
+    customer: { firstName: 'Nadia', username: 'nadia_k' },
+    title: 'Birthday cake, delivered',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Celebration cakes' },
+      { tap: 'chocolate' }, { tap: '10 servings' }, { tap: '1' },
+      { tapNth: { like: 'Sep', index: 0 } }, { tap: 'Afternoon' },
+      { tap: 'city centre' }, { type: '12 Harbour Lane, flat 4' },
+      { type: 'Happy birthday Mira - no nuts please' }, { tap: 'Use "Nadia"' },
+      { type: '+1 415 555 0199' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'office-platters',
+    at: 47 * MIN,
+    customer: { firstName: 'Tobias', username: 'tobias_m' },
+    title: 'Office breakfast for a Friday meeting',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Office platters' },
+      { tap: 'Morning pastry' }, { type: '3' },
+      { tapNth: { like: 'Sep', index: 0 } }, { tap: 'Morning' },
+      { tap: 'outer districts' }, { type: 'Kestrel House, 88 Rowan Street, 2nd floor' },
+      { type: 'Please ring reception, the office door is locked before 9' },
+      { type: 'Tobias Meier' }, { type: '+49 30 0000 1188' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'too-soon',
+    at: 92 * MIN,
+    customer: { firstName: 'Priya', username: null },
+    title: 'Wants a cake tomorrow - learns about the 48 hours, books anyway',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Celebration cakes' },
+      { tap: 'Lemon' }, { tap: '6 servings' }, { tap: '1' },
+      { type: 'tomorrow' },
+      { tapNth: { like: 'Sep', index: 1 } }, { tap: 'Morning' },
+      { tap: 'pick it up' }, { tap: 'Nothing to add' },
+      { type: 'Priya' }, { type: '+44 7700 900461' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'question',
+    at: 128 * MIN,
+    customer: { firstName: 'Ellen', username: 'ellen_w' },
+    title: 'A question only a human can answer',
+    steps: [
+      { start: true }, { tap: 'Talk to a human' },
+      { type: 'Can you make the lemon cake without gluten for 20 people?' },
+    ],
+  },
+  {
+    id: 'out-of-zone',
+    at: 171 * MIN,
+    customer: { firstName: 'Marek', username: null },
+    title: 'Lives too far for delivery - switches to pickup',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Bread boxes' },
+      { tap: 'Sourdough' }, { type: '4' },
+      { tapNth: { like: 'Sep', index: 0 } }, { tap: 'Morning' },
+      { tap: 'further than 12 km' }, { tap: 'pick it up' },
+      { tap: 'Nothing to add' }, { type: 'Marek Nowak' }, { type: '+48 000 000 122' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'changed-mind',
+    at: 214 * MIN,
+    customer: { firstName: 'Sofia', username: 'sofia_r' },
+    title: 'Books, then changes the size before confirming',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Celebration cakes' },
+      { tap: 'vanilla' }, { tap: '6 servings' }, { tap: '1' },
+      { tapNth: { like: 'Sep', index: 1 } }, { tap: 'Afternoon' },
+      { tap: 'pick it up' }, { type: 'Message on top: Congratulations Amir' },
+      { type: 'Sofia Ruiz' }, { type: '+34 000 000 019' },
+      { tap: 'Change something' }, { tap: 'The item' },
+      { tap: 'Celebration cakes' }, { tap: 'vanilla' }, { tap: '16 servings' }, { tap: '1' },
+      { tapNth: { like: 'Sep', index: 1 } }, { tap: 'Afternoon' },
+      // a bigger cake means the delivery question comes back - she still wants pickup
+      { tap: 'pick it up' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'typos',
+    at: 259 * MIN,
+    customer: { firstName: 'Junhao', username: null },
+    title: 'Types instead of tapping, gets the date wrong twice',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Office platters' },
+      { tap: 'Cookie box' }, { type: 'two boxes' }, { type: '2' },
+      { type: 'next friday' }, { type: '28.09' }, { type: '25.09' }, { tap: 'Morning' },
+      { tap: 'city centre' }, { type: '5 Alder Court' },
+      { tap: 'Nothing to add' }, { type: 'Junhao' }, { type: '+65 0000 0132' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'abandoned',
+    at: 296 * MIN,
+    customer: { firstName: 'Aria', username: null },
+    title: 'Starts an order and gives up halfway',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Celebration cakes' },
+      { tap: 'chocolate' }, { tap: '16 servings' },
+    ],
+  },
+  {
+    id: 'bread-run',
+    at: 331 * MIN,
+    customer: { firstName: 'Olu', username: 'olu_b' },
+    title: 'Bread for the morning, pickup',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Bread boxes' },
+      { tap: 'rye' }, { type: '6' },
+      { tapNth: { like: 'Sep', index: 0 } }, { tap: 'Morning' },
+      { tap: 'pick it up' }, { tap: 'Nothing to add' },
+      { type: 'Olu' }, { type: '+234 000 000 7781' }, { tap: 'Confirm' },
+    ],
+  },
+  {
+    id: 'cancelled',
+    at: 372 * MIN,
+    customer: { firstName: 'Dana', username: null },
+    title: 'Fills everything in, then cancels',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Office platters' },
+      { tap: 'Sandwich' }, { type: '1' },
+      { tapNth: { like: 'Sep', index: 0 } }, { tap: 'Afternoon' },
+      { tap: 'pick it up' }, { tap: 'Nothing to add' },
+      { type: 'Dana' }, { type: '+1 312 555 0110' }, { tap: 'Cancel the order' },
+    ],
+  },
+  {
+    id: 'late-cake',
+    at: 409 * MIN,
+    customer: { firstName: 'Henrik', username: 'henrik_s' },
+    title: 'Last order before opening - big cake, delivered',
+    steps: [
+      { start: true }, { tap: 'Place an order' }, { tap: 'Celebration cakes' },
+      { tap: 'Lemon' }, { tap: '16 servings' }, { tap: '2' },
+      { tapNth: { like: 'Sep', index: 2 } }, { tap: 'Afternoon' },
+      { tap: 'outer districts' }, { type: 'Sailmaker Yard 3, gate code 4417' },
+      { type: 'Two cakes for a wedding rehearsal - please keep them cool' },
+      { type: 'Henrik Sandvik' }, { type: '+47 000 00 112' }, { tap: 'Confirm' },
+    ],
+  },
+];
+
+/**
+ * Replays the night through the real engine.
+ * Returns the chats (for the transcript on screen) and what the owner would see.
+ */
+function runNight({ start = NIGHT_START, scenarios = SCENARIOS } = {}) {
+  const chats = [];
+  const orders = [];
+  const ownerMessages = [];
+  let sequence = 1;
+
+  for (const scenario of scenarios) {
+    const chat = createChat({
+      now: start + scenario.at,
+      firstName: scenario.customer.firstName,
+      username: scenario.customer.username,
+      chatId: 1000 + chats.length,
+      sequence,
+    });
+    playScenario(chat, scenario);
+    sequence = chat.sequence;
+    orders.push(...chat.orders);
+    ownerMessages.push(...chat.ownerMessages);
+    chats.push({ scenario, chat });
+  }
+
+  return {
+    start,
+    end: start + scenarios[scenarios.length - 1].at + 4 * MIN,
+    chats,
+    orders,
+    ownerMessages,
+    questions: ownerMessages.filter((m) => m.kind === 'question').length,
+    revenueCents: orders.reduce((sum, o) => sum + o.totals.totalCents, 0),
+  };
+}
+
+/** Replays one written scenario into a chat - used by the night and by ?play= on the page. */
+function playScenario(chat, scenario, upTo) {
+  const steps = typeof upTo === 'number' ? scenario.steps.slice(0, upTo) : scenario.steps;
+  for (const step of steps) {
+    if (step.start) chat.start();
+    else if (step.type !== undefined) chat.type(step.type);
+    else if (step.tap !== undefined) chat.tapLike(step.tap);
+    else if (step.tapNth) tapNth(chat, step.tapNth);
+  }
+  return chat;
+}
+
+function scenarioById(id) {
+  return SCENARIOS.find((s) => s.id === id) || null;
+}
+
+/** "the second free day on offer" - dates move with the clock, labels do not. */
+function tapNth(chat, { like, index }) {
+  const keyboard = chat.keyboard();
+  const matches = (keyboard ? keyboard.rows.flat() : []).filter((b) => b.text.includes(like));
+  const button = matches[index];
+  if (!button) throw new Error(`No button #${index} matching "${like}"`);
+  return chat.tap(button.text);
+}
+// ---- ENGINE:END ----
+</script>
+<script>
+"use strict";
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------------------------------------------------------------- theme */
+  var params = new URLSearchParams(location.search);
+  var root = document.documentElement;
+  function setTheme(name) {
+    root.setAttribute('data-theme', name);
+    $('theme-toggle').textContent = name === 'dark' ? '☀️ Light' : '🌙 Dark';
+  }
+  var wantedTheme = params.get('theme');
+  setTheme(wantedTheme === 'dark' || wantedTheme === 'light' ? wantedTheme
+    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('theme-toggle').addEventListener('click', function () {
+    setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  /* ------------------------------------------------------------ live chat */
+  // The clock is pinned so the demo shows the same days every time it is opened.
+  var DEMO_NOW = NIGHT_START + 105 * 60 * 1000;
+  var chat = null;
+  var shown = 0;
+
+  function newChat() {
+    chat = createChat({ now: DEMO_NOW, firstName: 'Sam', username: 'sam_bakes', chatId: 7, sequence: 1 });
+    shown = 0;
+    $('chat').innerHTML = '';
+    renderOwner();
+    renderLiveOrders();
+    chat.start();
+    draw();
+  }
+
+  function draw() {
+    var box = $('chat');
+    var old = box.querySelector('.keys');
+    if (old) old.remove();
+
+    for (; shown < chat.messages.length; shown += 1) {
+      var m = chat.messages[shown];
+      var bubble = document.createElement('div');
+      bubble.className = 'msg ' + (m.from === 'bot' ? 'bot' : 'me');
+      // Bot text is already HTML-escaped by the engine before <b> is added.
+      if (m.from === 'bot') bubble.innerHTML = m.text;
+      else bubble.textContent = m.text;
+      box.appendChild(bubble);
+    }
+
+    var keyboard = chat.keyboard();
+    if (keyboard) {
+      var pad = document.createElement('div');
+      pad.className = 'keys';
+      keyboard.rows.forEach(function (row) {
+        var line = document.createElement('div');
+        line.className = 'row';
+        row.forEach(function (b) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = b.text;
+          button.addEventListener('click', function () { chat.tap(b.text); draw(); });
+          line.appendChild(button);
+        });
+        pad.appendChild(line);
+      });
+      box.appendChild(pad);
+    }
+    box.scrollTop = box.scrollHeight;
+    renderOwner();
+    renderLiveOrders();
+  }
+
+  function renderOwner() {
+    var feed = $('owner-feed');
+    $('owner-count').textContent = String(chat.ownerMessages.length);
+    if (chat.ownerMessages.length === 0) {
+      feed.innerHTML = '<div class="empty">Nothing yet - finish an order in the chat and it appears here instantly.</div>';
+      return;
+    }
+    feed.innerHTML = '';
+    chat.ownerMessages.slice().reverse().forEach(function (m) {
+      var div = document.createElement('div');
+      div.className = 'owner-msg' + (m.kind === 'question' ? ' question' : '');
+      div.innerHTML = m.text;
+      feed.appendChild(div);
+    });
+  }
+
+  function orderRow(o) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + o.number + '</td>' +
+      '<td>' + esc(o.item.label) + ' × ' + o.item.qty + '</td>' +
+      '<td>' + o.handover.dateLabel + '<br><span class="small muted">' + esc(o.handover.slotLabel) + '</span></td>' +
+      '<td>' + (o.handover.method === 'delivery'
+        ? '🚚 ' + esc(o.handover.address)
+        : '🏠 pickup') + '</td>' +
+      '<td class="num">' + money(o.totals.totalCents) + '</td>';
+    return tr;
+  }
+
+  function renderLiveOrders() {
+    var body = $('live-orders').querySelector('tbody');
+    body.innerHTML = '';
+    if (chat.orders.length === 0) {
+      body.innerHTML = '<tr><td colspan="5" class="empty">No orders yet.</td></tr>';
+      return;
+    }
+    chat.orders.forEach(function (o) { body.appendChild(orderRow(o)); });
+  }
+
+  $('composer').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var value = $('input').value.trim();
+    if (!value) return;
+    $('input').value = '';
+    if (value.charAt(0) === '/') chat.command(value.slice(1).split(/\s/)[0].toLowerCase());
+    else chat.type(value);
+    draw();
+  });
+  $('restart').addEventListener('click', newChat);
+
+  /* ----------------------------------------------------------- the night */
+  function renderNight() {
+    var night = runNight();
+
+    $('s-orders').textContent = String(night.orders.length);
+    $('s-revenue').textContent = money(night.revenueCents);
+    $('s-questions').textContent = String(night.questions);
+    $('s-chats').textContent = String(night.chats.length);
+    $('night-stats').hidden = false;
+    $('night-result').hidden = false;
+    $('night-transcripts').hidden = false;
+    $('night-state').textContent = 'Run just now, in this page.';
+
+    $('night-summary').innerHTML = nightSummary(night.orders, night.questions, night.start, night.end);
+    // The sentence is written from the run itself, so it cannot drift from it.
+    $('night-intro').textContent = night.chats.length + ' people wrote to the bakehouse between '
+      + humanTime(night.start) + ' and ' + humanTime(night.end)
+      + ' - one September night, invented like the rest of this demo. Every number below was counted from that run just now, in this page.';
+
+    var body = $('night-orders').querySelector('tbody');
+    body.innerHTML = '';
+    night.orders.forEach(function (o) { body.appendChild(orderRow(o)); });
+
+    var list = $('transcript-list');
+    list.innerHTML = '';
+    night.chats.forEach(function (entry) {
+      var placed = entry.chat.orders.length > 0;
+      var asked = entry.chat.ownerMessages.some(function (m) { return m.kind === 'question'; });
+      var box = document.createElement('details');
+      box.className = 'transcript';
+      var head = document.createElement('summary');
+      head.innerHTML = '<b>' + humanTime(entry.chat.messages.length ? night.start + entry.scenario.at : night.start) + '</b> ' +
+        esc(entry.scenario.title) +
+        ' <span class="tag ' + (placed ? 'ok' : 'none') + '">' +
+        (placed ? money(entry.chat.orders[0].totals.totalCents) : (asked ? 'question' : 'no order')) + '</span>';
+      box.appendChild(head);
+      var inner = document.createElement('div');
+      inner.className = 'transcript-body';
+      entry.chat.messages.forEach(function (m) {
+        var bubble = document.createElement('div');
+        bubble.className = 'msg ' + (m.from === 'bot' ? 'bot' : 'me');
+        if (m.from === 'bot') bubble.innerHTML = m.text;
+        else bubble.textContent = m.text;
+        inner.appendChild(bubble);
+      });
+      box.appendChild(inner);
+      list.appendChild(box);
+    });
+  }
+
+  $('run-night').addEventListener('click', renderNight);
+
+  /* ------------------------------------------------- address-bar switches */
+  newChat();
+  if (params.get('play')) {
+    var scenario = scenarioById(params.get('play'));
+    if (scenario) {
+      chat = createChat({
+        now: NIGHT_START + scenario.at,
+        firstName: scenario.customer.firstName,
+        username: scenario.customer.username,
+        chatId: 7, sequence: 1,
+      });
+      shown = 0;
+      $('chat').innerHTML = '';
+      playScenario(chat, scenario, params.get('stop') ? Number(params.get('stop')) : undefined);
+      draw();
+    }
+  }
+  if (params.get('night') === '1') renderNight();
+  if (params.get('open')) {
+    var wanted = params.get('open');
+    setTimeout(function () {
+      var items = document.querySelectorAll('#transcript-list details');
+      if (wanted === 'all') items.forEach(function (d) { d.open = true; });
+      else if (items[Number(wanted)]) items[Number(wanted)].open = true;
+    }, 0);
+  }
+  // ?only=try|night|how|support shows one section on its own - used for the screenshots
+  // in the case study, so each picture is the section itself and not a scroll position.
+  var only = params.get('only');
+  if (only) {
+    document.querySelectorAll('main > section').forEach(function (node) {
+      if (node.id !== only) node.hidden = true;
+    });
+    var hero = document.querySelector('.hero');
+    if (hero) hero.hidden = true;
+  }
+  if (location.hash) {
+    try {
+      var target = document.querySelector(location.hash);
+      if (target) target.scrollIntoView();
+    } catch (error) { /* "#1" and friends are not valid selectors - not worth an error */ }
+  }
+}());
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+.env
+storage/orders.json
+storage/orders.json.tmp
+storage/*.broken-*
+bot/logs/
+node_modules/
+.DS_Store

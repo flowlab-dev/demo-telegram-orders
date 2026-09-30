@@ -1,0 +1,512 @@
+[
+ {
+  "from": "customer",
+  "label": "Hi!"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "Good evening, Nora! 👋\n\nYou are chatting with *Cedarline Bakehouse*. I take orders at any hour - the bakehouse reads them when the ovens go on.\n\nWhat would you like to do?"
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "idle|order",
+         "title": "🧁 Place an order"
+        },
+        {
+         "id": "idle|menu",
+         "title": "📋 Menu & prices"
+        },
+        {
+         "id": "idle|hours",
+         "title": "🚚 Pickup, delivery & h…",
+         "description": "🚚 Pickup, delivery & hours"
+        },
+        {
+         "id": "idle|ask",
+         "title": "💬 Talk to a human"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ 🧁 Place an order"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "What are we baking for you?"
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "category|cake",
+         "title": "Celebration cakes",
+         "description": "baked to order, 48 hours notice"
+        },
+        {
+         "id": "category|platter",
+         "title": "Office platters",
+         "description": "for meetings and events, 24 hours notice"
+        },
+        {
+         "id": "category|bread",
+         "title": "Bread boxes",
+         "description": "next-morning bread, 12 hours notice"
+        },
+        {
+         "id": "category|back",
+         "title": "← Back"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Bread boxes"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "*Bread boxes* - next-morning bread, 12 hours notice.\n\nPick one:"
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "item|sourdough",
+         "title": "Sourdough duo - $14.00"
+        },
+        {
+         "id": "item|rye",
+         "title": "Seeded rye loaf - $9.00"
+        },
+        {
+         "id": "item|brioche",
+         "title": "Brioche buns (6)",
+         "description": "$11.00"
+        },
+        {
+         "id": "item|back",
+         "title": "← Back"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Sourdough duo - $14.00"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "How many?\n\nTap a number, or type any number up to 12."
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "qty|1",
+         "title": "1"
+        },
+        {
+         "id": "qty|2",
+         "title": "2"
+        },
+        {
+         "id": "qty|3",
+         "title": "3"
+        },
+        {
+         "id": "qty|4",
+         "title": "4"
+        },
+        {
+         "id": "qty|5",
+         "title": "5"
+        },
+        {
+         "id": "qty|6",
+         "title": "6"
+        },
+        {
+         "id": "qty|back",
+         "title": "← Back"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ 2"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "Which day would you like it?\n\nThis one needs 12 hours, so the earliest is *Fri 25 Sep*.\nTap a day, or type one - day first: 25.09, 25 Sep or 2026-09-25."
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "date|2026-09-25",
+         "title": "Fri 25 Sep"
+        },
+        {
+         "id": "date|2026-09-26",
+         "title": "Sat 26 Sep"
+        },
+        {
+         "id": "date|2026-09-27",
+         "title": "Sun 27 Sep"
+        },
+        {
+         "id": "date|2026-09-29",
+         "title": "Tue 29 Sep"
+        },
+        {
+         "id": "date|back",
+         "title": "← Back"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Fri 25 Sep"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "*Fri 25 Sep* - when suits you?"
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "slot|pm",
+         "title": "Afternoon 12:00-18:00"
+        },
+        {
+         "id": "slot|back",
+         "title": "← Back"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Afternoon 12:00-18:00"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "Pickup or delivery?\n\nYour order so far: Sourdough duo × 2 - $28.00.\nDelivery is added on top; pickup is free, 08:00-18:00."
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "zone|pickup",
+         "title": "I will pick it up - free"
+        },
+        {
+         "id": "zone|a",
+         "title": "Delivery",
+         "description": "city centre (up to 5 km) - $6.00"
+        },
+        {
+         "id": "zone|b",
+         "title": "Delivery",
+         "description": "outer districts (5-12 km) - $11.00"
+        },
+        {
+         "id": "zone|far",
+         "title": "Delivery",
+         "description": "further than 12 km"
+        },
+        {
+         "id": "zone|back",
+         "title": "← Back"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ I will pick it up - free"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "button",
+    "body": {
+     "text": "Anything we should know?\n\nAllergies, packaging, a doorbell that never works - write it here."
+    },
+    "action": {
+     "buttons": [
+      {
+       "type": "reply",
+       "reply": {
+        "id": "notes|skip",
+        "title": "Nothing to add"
+       }
+      },
+      {
+       "type": "reply",
+       "reply": {
+        "id": "notes|back",
+        "title": "← Back"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Nothing to add"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "button",
+    "body": {
+     "text": "Whose name should the order be under?"
+    },
+    "action": {
+     "buttons": [
+      {
+       "type": "reply",
+       "reply": {
+        "id": "name|self",
+        "title": "Use \"Nora\""
+       }
+      },
+      {
+       "type": "reply",
+       "reply": {
+        "id": "name|back",
+        "title": "← Back"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Use \"Nora\""
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "button",
+    "body": {
+     "text": "And a phone number, in case the bakehouse needs to reach you on the day."
+    },
+    "action": {
+     "buttons": [
+      {
+       "type": "reply",
+       "reply": {
+        "id": "phone|back",
+        "title": "← Back"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "+44 7700 900111"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "button",
+    "body": {
+     "text": "*Here is your order*\n\n🧁 Sourdough duo × 2 - $28.00\n📅 Fri 25 Sep, Afternoon 12:00-18:00\n🏠 Pickup at the bakehouse - free\n👤 Nora, +44 7700 900111\n\n*Total: $28.00*\nPayment on pickup or on delivery - card or cash."
+    },
+    "action": {
+     "buttons": [
+      {
+       "type": "reply",
+       "reply": {
+        "id": "confirm|yes",
+        "title": "Confirm the order ✅"
+       }
+      },
+      {
+       "type": "reply",
+       "reply": {
+        "id": "confirm|edit",
+        "title": "Change something"
+       }
+      },
+      {
+       "type": "reply",
+       "reply": {
+        "id": "confirm|cancel",
+        "title": "Cancel the order"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ {
+  "from": "customer",
+  "label": "▸ Confirm the order ✅"
+ },
+ {
+  "from": "system",
+  "order": "CED-2409-001"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "text",
+   "text": {
+    "body": "Booked! ✅ Your order number is *CED-2409-001*.\n\nSourdough duo × 2, ready Fri 25 Sep, Afternoon 12:00-18:00.\nPickup at the bakehouse, 08:00-18:00.\nTotal $28.00.\n\nThe bakehouse sees this order right away and will confirm in this chat from 08:00. Need to change something? Write here, quote CED-2409-001, and a person will pick it up."
+   }
+  }
+ },
+ {
+  "from": "owner",
+  "text": "🧾 <b>New order CED-2409-001</b> (21:40)\nSourdough duo × 2\nFri 25 Sep, Afternoon 12:00-18:00\nPickup\nNora, +44 7700 900111\n<b>$28.00</b>"
+ },
+ {
+  "from": "bot",
+  "payload": {
+   "type": "interactive",
+   "interactive": {
+    "type": "list",
+    "body": {
+     "text": "Anything else I can do for you?"
+    },
+    "action": {
+     "button": "Choose",
+     "sections": [
+      {
+       "title": "Options",
+       "rows": [
+        {
+         "id": "idle|order",
+         "title": "🧁 Place an order"
+        },
+        {
+         "id": "idle|menu",
+         "title": "📋 Menu & prices"
+        },
+        {
+         "id": "idle|hours",
+         "title": "🚚 Pickup, delivery & h…",
+         "description": "🚚 Pickup, delivery & hours"
+        },
+        {
+         "id": "idle|ask",
+         "title": "💬 Talk to a human"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ }
+]
